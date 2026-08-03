@@ -13,14 +13,18 @@ public class RowMessage {
     private String sheetName;
     private int rowIndex;
     private Map<String, String> data;
+    private String changeType; // "ADDED", "UPDATED", or "UNCHANGED"
+    private long timestamp;
 
     public RowMessage() {}
 
-    public RowMessage(String fileName, String sheetName, int rowIndex, Map<String, String> data) {
+    public RowMessage(String fileName, String sheetName, int rowIndex, Map<String, String> data, String changeType, long timestamp) {
         this.fileName = fileName;
         this.sheetName = sheetName;
         this.rowIndex = rowIndex;
         this.data = data;
+        this.changeType = changeType;
+        this.timestamp = timestamp;
     }
 
     public String getFileName() { return fileName; }
@@ -35,7 +39,13 @@ public class RowMessage {
     public Map<String, String> getData() { return data; }
     public void setData(Map<String, String> data) { this.data = data; }
 
-    // FIX: Use ObjectMapper to guarantee safe and valid JSON output
+    public String getChangeType() { return changeType; }
+    public void setChangeType(String changeType) { this.changeType = changeType; }
+
+    public long getTimestamp() { return timestamp; }
+    public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
+
+    // Guarantees safe and valid JSON output
     public String toJson() {
         try {
             return objectMapper.writeValueAsString(this);
@@ -44,3 +54,6 @@ public class RowMessage {
         }
     }
 }
+//Added changeType (ADDED, UPDATED, UNCHANGED) so consumers receiving the JSON payload know the delta operation type.
+
+//Added timestamp for auditing when the file modification was caught and streamed.
