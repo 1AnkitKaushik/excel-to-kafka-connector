@@ -1,6 +1,0 @@
-com\dataflow\connector\file\model\RowMessage.class
-com\dataflow\connector\file\FileConnectorApplication.class
-com\dataflow\connector\file\config\KafkaProducerConfig.class
-com\dataflow\connector\file\reader\ExcelFileReader.class
-com\dataflow\connector\file\publisher\KafkaRowPublisher.class
-com\dataflow\connector\file\watcher\ExcelFileWatcher.class
