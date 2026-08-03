@@ -6,7 +6,7 @@ An event-driven Spring Boot service that continuously monitors a directory for E
 
 ## 🏗️ Architecture & Pipeline Summary
 
-1. **Directory Monitoring:** Uses Spring File Watcher to continuously monitor a target directory for newly dropped or updated Excel (`.xlsx`) files.
+1. **Directory Monitoring:** Uses Java NIO (`WatchService`) to continuously monitor a target directory for newly dropped or updated Excel (`.xlsx`) files.
 2. **Spreadsheet Parsing (Apache POI):** Reads incoming `.xlsx` files, extracts Row 0 as dynamic column headers, and maps each subsequent row's cell values into header-driven key-value pairs.
 3. **Data Model Mapping:** Maps each spreadsheet row into a Java object (`RowMessage`), preserving file metadata, row index, and key-value payload data.
 4. **Asynchronous JSON Streaming:** Uses Spring's `KafkaTemplate` to serialize each `RowMessage` into a JSON payload and publish it asynchronously to the `excel-file-updates` Kafka topic.
