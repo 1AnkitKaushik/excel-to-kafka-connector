@@ -18,6 +18,12 @@ public class RowMessage {
 
     public RowMessage() {}
 
+    // Legacy / Default Constructor (fixes ExcelFileReader compilation error)
+    public RowMessage(String fileName, String sheetName, int rowIndex, Map<String, String> data) {
+        this(fileName, sheetName, rowIndex, data, "ADDED", System.currentTimeMillis());
+    }
+
+    // Full Delta Tracking Constructor
     public RowMessage(String fileName, String sheetName, int rowIndex, Map<String, String> data, String changeType, long timestamp) {
         this.fileName = fileName;
         this.sheetName = sheetName;
@@ -45,7 +51,6 @@ public class RowMessage {
     public long getTimestamp() { return timestamp; }
     public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
 
-    // Guarantees safe and valid JSON output
     public String toJson() {
         try {
             return objectMapper.writeValueAsString(this);
@@ -54,6 +59,3 @@ public class RowMessage {
         }
     }
 }
-//Added changeType (ADDED, UPDATED, UNCHANGED) so consumers receiving the JSON payload know the delta operation type.
-
-//Added timestamp for auditing when the file modification was caught and streamed.

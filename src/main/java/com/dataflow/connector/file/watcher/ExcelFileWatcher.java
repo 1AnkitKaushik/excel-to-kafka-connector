@@ -1,4 +1,4 @@
-package com.dataflow.connector.watcher;
+package com.dataflow.connector.file.watcher;
 
 import com.dataflow.connector.file.model.RowMessage;
 import org.apache.poi.ss.usermodel.*;
@@ -14,19 +14,18 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class ExcelFileWatcher {
 
-    private final KafkaTemplate<String, String> kafkaTemplate;
+    @SuppressWarnings("rawtypes")
+    private final KafkaTemplate kafkaTemplate;
     
-    // In-memory state store to track previous row states: Map<"filename:rowIndex", "RowContentHash">
     private final Map<String, String> fileStateStore = new ConcurrentHashMap<>();
+    private final DataFormatter dataFormatter = new DataFormatter();
 
-    public ExcelFileWatcher(KafkaTemplate<String, String> kafkaTemplate) {
+    @SuppressWarnings("rawtypes")
+    public ExcelFileWatcher(KafkaTemplate kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    /**
-     * Parses the Excel file and streams only ADDED or UPDATED rows to Kafka.
-     * Calculates delta stats (Added, Updated, Unchanged).
-     */
+    @SuppressWarnings("unchecked")
     public void processFile(Path filePath) {
         String filename = filePath.getFileName().toString();
         
@@ -46,21 +45,21 @@ public class ExcelFileWatcher {
                 return;
             }
 
-            // Extract dynamic headers from Row 0
+            // Extract headers safely (converting numeric headers to string using DataFormatter)
             List<String> headers = new ArrayList<>();
             for (Cell cell : headerRow) {
-                headers.add(cell.getStringCellValue().trim());
+                headers.add(dataFormatter.formatCellValue(cell).trim());
             }
 
-            // Iterate data rows (Row index 1 onwards)
+            // Iterate data rows (Row 1 onwards)
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
                 Map<String, String> rowData = new LinkedHashMap<>();
                 for (int j = 0; j < headers.size(); j++) {
-                    Cell cell = row.getCell(j, Row.MissingCellPolicy.CREATE_NULL_AS_EMPTY);
-                    rowData.put(headers.get(j), cell.toString().trim());
+                    Cell cell = row.getCell(j);
+                    rowData.put(headers.get(j), dataFormatter.formatCellValue(cell).trim());
                 }
 
                 String rowKey = filename + ":" + i;
@@ -79,10 +78,8 @@ public class ExcelFileWatcher {
                     unchangedCount++;
                 }
 
-                // Update row hash in state memory
                 fileStateStore.put(rowKey, currentHash);
 
-                // Publish to Kafka only if the row is ADDED or UPDATED
                 if (!changeType.equals("UNCHANGED")) {
                     RowMessage message = new RowMessage(
                         filename,
@@ -93,12 +90,10 @@ public class ExcelFileWatcher {
                         System.currentTimeMillis()
                     );
                     
-                    // Route serialized JSON to Kafka topic using composite key for partition ordering
                     kafkaTemplate.send("excel-file-updates", rowKey, message.toJson());
                 }
             }
 
-            // Output execution summary to console
             System.out.println(String.format(
                 "📊 [%s] Delta Summary: %d Added, %d Updated, %d Unchanged", 
                 filename, addedCount, updatedCount, unchangedCount
